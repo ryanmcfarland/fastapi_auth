@@ -1,0 +1,51 @@
+[project]
+name = "fastapi_auth"
+version = "0.1.0"
+description = "FastAPI Auth System"
+readme = "README.md"
+license = "MIT"
+requires-python = "==3.12.4"
+authors = [{ name = "Ryan McFarland" }]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+]
+keywords = ["fastapi", "authentication", "api", "async"]
+
+dependencies = [
+    "bcrypt==4.3.0",
+    "fastapi==0.115.13",
+    "psycopg==3.2.9",
+    "psycopg-pool==3.2.6",
+    "pydantic==2.11.7",
+    "pydantic-settings==2.10.1",
+    "pydantic_core==2.33.2",
+    "PyJWT==2.10.1",
+    "python-dotenv==1.1.0",
+    "python-multipart==0.0.20",
+    "asgi-correlation-id==4.3.4",
+    "uvicorn==0.35.0",
+    "gunicorn==23.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==7.4.0", "pytest-cov==6.2.1"]
+
+# Test configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = []
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "auth: marks tests related to authentication",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/migrations/*"]
