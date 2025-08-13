@@ -49,7 +49,9 @@ migrate -path=./migrations -database=$DATABASE goto <migration number>
 
 ## Example
 
+```bash
 migrate -database postgresql://{username}:{password}@{hostname}:{port}/{database}?sslmode=disable -path db/migrations up
+```
 
 `?sslmode=disable` -> required due to ssl disabled in personal dev docker
 

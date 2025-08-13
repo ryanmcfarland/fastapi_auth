@@ -31,10 +31,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==7.4.0", "pytest-cov==6.2.1"]
+dev = ["pytest==7.4.0", "pytest-cov==6.2.1", "pytest-asyncio==1.1.0"]
 
 # Test configuration
 [tool.pytest.ini_options]
+asyncio_mode = "strict"
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = []

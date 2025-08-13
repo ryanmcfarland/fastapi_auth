@@ -3,7 +3,7 @@ import logging.config
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-from app.core.db import initialize_database, close_database
+from app.core.globals import initialize_database, close_database
 from app.core.logging import get_logging_config
 
 

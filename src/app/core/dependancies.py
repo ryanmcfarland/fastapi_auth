@@ -1,4 +1,6 @@
-from app.core.db import AsyncDatabase, get_database
+from .db import AsyncDatabase
+
+from .globals import get_database
 
 
 def get_db() -> AsyncDatabase:

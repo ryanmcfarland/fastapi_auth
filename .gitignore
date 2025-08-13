@@ -1,7 +1,12 @@
+# vscode & envirnoment related
 .vscode
 .env
+.coverage
 
+# python related folders
 __pycache__
 .pytest_cache
 
+# extra
 logs
+notes

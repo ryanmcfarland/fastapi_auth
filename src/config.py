@@ -2,16 +2,20 @@ import os
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Annotated
 
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 from pydantic_settings import BaseSettings
 
 base_directory = Path(__file__).parent
 
+env_file = os.environ.get("FASTAPI_ENV_FILE", base_directory.parent.joinpath(".env").as_posix())
+
 
 class BaseConfig(BaseSettings):
     """Base configuration class with common settings"""
+
+    model_config = ConfigDict(env_file=env_file, case_sensitive=True, extra="ignore")
 
     # Application settings
     APP_NAME: str = "FastAPI Application"
@@ -22,8 +26,8 @@ class BaseConfig(BaseSettings):
     LOG_DIRECTORY: str
 
     # Common Config
-    CODE_DIR: Path = base_directory
-    SQL_DIRECTORIES: List[Path] = [base_directory.joinpath("sql_queries")]
+    CODE_DIR: Annotated[Path, "Path: App Directory"] = base_directory
+    REPO_DIR: Annotated[Path, "Path: Base Repository"] = CODE_DIR.parent
 
     # Database settings - Example str: "postgresql://user:password@localhost/dbname"
     DATABASE_URL: Optional[str] = None
@@ -34,11 +38,6 @@ class BaseConfig(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = "ignore"
 
     @field_validator("LOG_DIRECTORY")
     def create_log_directory(cls, v):
@@ -64,12 +63,6 @@ class TestingConfig(BaseConfig):
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
     SECRET_KEY: str = "my - secret - test - key"
-
-    # should be geared towards the tests/ directory
-    SQL_DIRECTORIES: List[Path] = [
-        base_directory.joinpath("sql_queries"),
-        base_directory.parent.joinpath("tests/sql_queries"),
-    ]
 
 
 class ProductionConfig(BaseConfig):

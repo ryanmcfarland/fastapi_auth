@@ -50,12 +50,13 @@ class UserResponse(BaseModel):
     created_at: datetime
 
 
-class UserInDB(BaseModel):
+class User(BaseModel):
     """Database model - stores hashed password."""
 
     id: Optional[int] = None
     username: str
     email: str
-    role: str
+    password_hash: str
+    roles: List[str]
     is_active: bool = True
     created_at: Optional[str] = None

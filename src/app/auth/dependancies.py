@@ -3,6 +3,7 @@ from typing import Annotated, Optional
 from fastapi import HTTPException, Depends, Header, Cookie
 
 from app.core.db import AsyncDatabase
+
 from app.core.dependancies import get_db
 from app.auth.utils import OAuth2PasswordBearerWithCookie
 from app.auth.service import UserService, PermissionService

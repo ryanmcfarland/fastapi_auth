@@ -2,19 +2,30 @@ import pytest
 import asyncio
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from main import app  # type: ignore
-from app.core.db import AsyncDatabase  # type: ignore
-from app.core.dependancies import get_db  # type: ignore
+from main import app
+from config import get_settings
+from app.core.db import AsyncDatabase
+from app.core.dependancies import get_db
+from app.core.utils import load_sql_query
 
+settings = get_settings()
 
 test_db = AsyncDatabase()
 
 
+@pytest.fixture(scope="session", autouse=True)
 def get_test_db() -> AsyncDatabase:
     return test_db
+
+
+@pytest.fixture(scope="session", autouse=True)
+def tests_directory():
+    """Returns the current working directory as a Path object"""
+    return settings.REPO_DIR / "tests"
 
 
 @pytest.fixture(scope="session")
@@ -26,22 +37,23 @@ def get_event_loop():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def setup_test_databases(get_event_loop):
+def setup_test_databases(get_event_loop, get_test_db):
     loop = get_event_loop
-    loop.run_until_complete(get_test_db().initialize())
+    loop.run_until_complete(get_test_db.initialize())
     yield
-    loop.run_until_complete(get_test_db().close())
+    loop.run_until_complete(get_test_db.close())
 
 
 @pytest.fixture(scope="function", autouse=True)
-def reset_database(get_event_loop):
+def reset_database(get_event_loop, tests_directory, get_test_db):
     loop = get_event_loop
-    loop.run_until_complete(get_test_db().execute("setup_db"))
+    query = load_sql_query("setup_db", base_path=tests_directory)
+    loop.run_until_complete(get_test_db.execute(query))
 
 
 @pytest.fixture(scope="function")
 def client():
-    app.dependency_overrides[get_db] = get_test_db
+    app.dependency_overrides[get_db] = lambda: test_db
     return TestClient(app)
 
 
