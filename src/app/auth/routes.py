@@ -6,8 +6,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 import app.auth.models as models
 
 from app.core.utils import ErrorHandlerRoute
-from app.auth.service import UserService
-from app.auth.dependancies import get_user_service, get_refresh_token
+from app.auth.service import UserService, PermissionService
+from app.auth.dependancies import get_user_service, get_refresh_token, get_permission_service
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"], route_class=ErrorHandlerRoute)
 
@@ -34,12 +34,13 @@ async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
         raise HTTPException(status_code=500, detail=f"Login failed: {e.__class__.__name__}")
 
 
-# TODO (mocked)
 @auth_router.post("/logout")
-def logout(user_service: UserService = Depends(get_user_service)):
+async def logout(permission_service: PermissionService = Depends(get_permission_service)):
+    """ """
+    await permission_service.logout_user()
     return {"msg": "Logout endpoint hit (mocked)"}
 
 
 @auth_router.post("/refresh")
 async def refresh(refresh_token_cookie: str = Depends(get_refresh_token()), user_service: UserService = Depends(get_user_service)):
-    return await user_service.verify_refresh_token(refresh_token_cookie, "refresh")
+    return await user_service.verify_refresh_token(refresh_token_cookie)

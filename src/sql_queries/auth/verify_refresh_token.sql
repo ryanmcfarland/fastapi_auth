@@ -1,5 +1,5 @@
 SELECT 
-    true
+    true as valid
 FROM users u
 INNER JOIN user_refresh_tokens ur ON u.id = ur.user_id
 WHERE

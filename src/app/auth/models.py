@@ -42,7 +42,7 @@ class RegisterRequest(BaseModel):
 
 
 class UserResponse(BaseModel):
-    """Response model - excludes password completely."""
+    """Response model - excludes id & password."""
 
     username: str
     email: str

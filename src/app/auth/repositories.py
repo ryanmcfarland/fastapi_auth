@@ -36,3 +36,6 @@ class AuthRepository:
     async def insert_refresh_token(self, username: str, refresh_token: str) -> dict:
         params = {"username": username, "refresh_token": refresh_token}
         return await self.db.execute(load_sql_query("insert_refresh_token", module="auth"), params=params)
+
+    async def logout_user(self, user_id: int) -> None:
+        return await self.db.execute(load_sql_query("logout_user", module="auth"), params={"user_id": user_id})
