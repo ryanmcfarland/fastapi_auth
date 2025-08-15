@@ -31,7 +31,7 @@ async def test_refresh_token_logic(get_test_db):
     await repo.insert_refresh_token("testuser", "token3")
     assert await repo.verify_refresh_token("testuser", "token2")
     # confirming deletion of the initial token1
-    assert None == await repo.verify_refresh_token("testuser", "token1")
+    assert False == await repo.verify_refresh_token("testuser", "token1")
 
 
 @pytest.mark.auth
@@ -45,4 +45,4 @@ async def test_logout_user(get_test_db):
     await repo.insert_refresh_token("testuser", "token1")
     assert await repo.verify_refresh_token("testuser", "token1")
     await repo.logout_user(1)
-    assert None == await repo.verify_refresh_token("testuser", "token1")
+    assert False == await repo.verify_refresh_token("testuser", "token1")

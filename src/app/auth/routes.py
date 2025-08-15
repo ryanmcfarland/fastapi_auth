@@ -35,9 +35,10 @@ async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
 
 
 @auth_router.post("/logout")
-async def logout(permission_service: PermissionService = Depends(get_permission_service)):
-    """ """
+async def logout(response: Response, permission_service: PermissionService = Depends(get_permission_service)):
+    """test"""
     await permission_service.logout_user()
+    response.delete_cookies(key="access_token")
     return {"msg": "Logout endpoint hit (mocked)"}
 
 

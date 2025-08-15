@@ -49,9 +49,9 @@ class UserService:
         payload = self.token_utils.decode_token(token)
         if payload.get("type") != "refresh":
             raise HTTPException(status_code=401, detail="Invalid token type")
-        verified = await self.user_repo.verify_refresh_token(payload.get("sub", ""), token)
+        verified: bool = await self.user_repo.verify_refresh_token(payload.get("sub", ""), token)
         if not verified:
-            raise HTTPException(status_code=401, detail="Invalid token type")
+            raise HTTPException(status_code=401, detail="Invalid token")
         return self.token_utils.create_access_token(data=payload)
 
     async def get_current_user(self, token: str) -> models.User:

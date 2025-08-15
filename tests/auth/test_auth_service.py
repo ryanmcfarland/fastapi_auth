@@ -67,4 +67,4 @@ async def test_logout_user(get_test_db):
     # test for the incoming HTTPException
     with pytest.raises(HTTPException) as excinfo:
         await service.verify_refresh_token(tokens["refresh_token"])
-    assert str(excinfo.value.detail) == "Invalid token type"
+    assert str(excinfo.value.detail) == "Invalid token"
