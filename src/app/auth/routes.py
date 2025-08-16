@@ -3,11 +3,15 @@ from typing import Annotated
 from fastapi import Response, APIRouter, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 
+from config import get_settings
+
 import app.auth.models as models
 
 from app.core.utils import ErrorHandlerRoute
 from app.auth.service import UserService
 from app.auth.dependancies import get_user_service, get_refresh_token, get_permission_service
+
+settings = get_settings()
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"], route_class=ErrorHandlerRoute)
 
@@ -27,7 +31,14 @@ async def register(user_data: models.RegisterRequest, user_service: UserService 
 async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()], user_service: UserService = Depends(get_user_service)):
     try:
         tokens = await user_service.login_user(form_data.username, form_data.password)
-        response.set_cookie(key="refresh_token", value=tokens["refresh_token"], httponly=True, secure=True, samesite="lax", max_age=1 * 24 * 60 * 60)
+        response.set_cookie(
+            key="refresh_token",
+            value=tokens["refresh_token"],
+            httponly=settings.HTTP_ONLY,
+            secure=settings.SECURE_COOKIES,
+            samesite="lax",
+            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        )
         return {"access_token": tokens["access_token"], "token_type": "bearer"}
     except HTTPException:
         raise

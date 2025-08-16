@@ -11,6 +11,14 @@ base_directory = Path(__file__).parent
 
 env_file = os.environ.get("FASTAPI_ENV_FILE", base_directory.parent.joinpath(".env").as_posix())
 
+"""
+Required JWT Constants - Not to be committed
+SECRET_KEY
+ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES
+REFRESH_TOKEN_EXPIRE_DAYS
+"""
+
 
 class BaseConfig(BaseSettings):
     """Base configuration class with common settings"""
@@ -20,10 +28,12 @@ class BaseConfig(BaseSettings):
     # Application settings
     APP_NAME: str = "FastAPI Application"
     APP_VERSION: str = "1.0.0"
-    API_PREFIX: str = "/api/v1"
-    SHOW_DOCS: bool = True
+    SHOW_DOCS: bool = False
 
+    # Logging
     LOG_DIRECTORY: str
+    LOG_LEVEL: str = "INFO"
+    LOG_INCLUDE_OPTIONAL: bool = False
 
     # Common Config
     CODE_DIR: Annotated[Path, "Path: App Directory"] = base_directory
@@ -35,9 +45,13 @@ class BaseConfig(BaseSettings):
 
     # Security settings
     SECRET_KEY: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     ALGORITHM: str = "HS256"
+
+    # Cookie Settings
+    HTTP_ONLY: bool = True
+    SECURE_COOKIES: bool = True
 
     @field_validator("LOG_DIRECTORY")
     def create_log_directory(cls, v):
@@ -50,8 +64,9 @@ class DevelopmentConfig(BaseConfig):
 
     DEBUG: bool = True
     TESTING: bool = False
+    SHOW_DOCS: bool = True
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10
     SECRET_KEY: str = "my - secret - key"
 
 
@@ -61,8 +76,11 @@ class TestingConfig(BaseConfig):
     DEBUG: bool = True
     TESTING: bool = True
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1
     SECRET_KEY: str = "my - secret - test - key"
+
+    SECURE_COOKIES: bool = False
+    HTTP_ONLY: bool = False
 
 
 class ProductionConfig(BaseConfig):
@@ -72,16 +90,6 @@ class ProductionConfig(BaseConfig):
     TESTING: bool = False
 
     LOG_LEVEL: str = "WARNING"
-
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-
-    # Production-specific settings
-    AUTO_RELOAD: bool = False
-    SHOW_DOCS: bool = False
-
-    # SSL and security settings
-    HTTPS_ONLY: bool = True
-    SECURE_COOKIES: bool = True
 
 
 # Factory function to get the appropriate config

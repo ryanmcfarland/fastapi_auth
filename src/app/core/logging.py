@@ -7,7 +7,32 @@ from config import get_settings
 settings = get_settings()
 
 
-def get_logging_config(log_level: str = "INFO") -> Dict[str, Any]:
+def get_optional_loggers() -> dict:
+    return {
+        # Psycopg loggers
+        "psycopg": {"level": "DEBUG", "handlers": ["console", "file_watcher"], "propagate": False},
+        "psycopg.connections": {"level": "DEBUG", "handlers": ["console", "file_watcher"], "propagate": False},
+    }
+
+
+def get_base_loggers(log_level: str = "INFO") -> dict:
+    return {
+        # FastAPI/Uvicorn loggers
+        "uvicorn": {"level": "WARNING", "handlers": ["file_watcher"], "propagate": False},
+        "uvicorn.access": {"level": "WARNING", "handlers": ["file_watcher"], "propagate": False},
+        "uvicorn.error": {"level": "WARNING", "handlers": ["file_watcher"], "propagate": False},
+        "gunicorn": {"level": "WARNING", "handlers": ["console", "file_watcher"], "propagate": False},
+        "fastapi": {"level": "WARNING", "handlers": ["console", "file_watcher"], "propagate": False},
+        # Core Application Loggers
+        "admin.routes": {"level": "INFO", "handlers": ["web_console", "web_file_watcher"], "propagate": False},
+        "core.startup": {"level": "INFO", "handlers": ["console", "file_watcher"], "propagate": False},
+        # Application loggers
+        "core.utils": {"level": log_level, "handlers": ["web_console", "web_file_watcher"], "propagate": False},
+        "core.db": {"level": log_level, "handlers": ["web_console", "web_file_watcher"], "propagate": False},
+    }
+
+
+def get_logging_config() -> Dict[str, Any]:
     """
     Returns a logging configuration dictionary compatible with logging.config.dictConfig()
 
@@ -16,8 +41,12 @@ def get_logging_config(log_level: str = "INFO") -> Dict[str, Any]:
     """
     default_fmt = "%(levelname)s [%(asctime)s.%(msecs)03d] [pid:%(process)s] %(name)s : %(message)s"
     web_req_fmt = "%(levelname)s [%(asctime)s.%(msecs)03d] [pid:%(process)s] [ReqId:%(correlation_id)s] %(name)s : %(message)s"
-
     filename = f"{settings.LOG_DIRECTORY}/test.log"
+    log_level: str = settings.LOG_LEVEL
+    # set default logger dictionary
+    loggers = get_base_loggers(log_level)
+    if settings.LOG_INCLUDE_OPTIONAL:
+        loggers.update(get_optional_loggers())
 
     config = {
         "version": 1,
@@ -61,21 +90,7 @@ def get_logging_config(log_level: str = "INFO") -> Dict[str, Any]:
             },
         },
         "root": {"level": "ERROR", "handlers": ["console", "file_watcher"]},
-        "loggers": {
-            # FastAPI/Uvicorn loggers
-            "uvicorn": {"level": log_level, "handlers": ["file_watcher"], "propagate": False},
-            "uvicorn.access": {"level": "INFO", "handlers": ["file_watcher"], "propagate": False},
-            "uvicorn.error": {"level": "ERROR", "handlers": ["file_watcher"], "propagate": False},
-            "gunicorn": {"level": "INFO", "handlers": ["file_watcher", "console"], "propagate": False},
-            "fastapi": {"level": log_level, "handlers": ["file_watcher"], "propagate": False},
-            # Application loggers
-            "app": {"level": log_level, "handlers": ["console", "file_watcher"], "propagate": False},
-            "core.utils": {"level": log_level, "handlers": ["web_console", "web_file_watcher"], "propagate": False},
-            "core.db": {"level": log_level, "handlers": ["web_console", "web_file_watcher"], "propagate": False},
-            # Psycopg loggers
-            "psycopg": {"level": "DEBUG", "handlers": ["console", "file_watcher"], "propagate": False},
-            "psycopg.connections": {"level": "DEBUG", "handlers": ["console", "file_watcher"], "propagate": False},
-        },
+        "loggers": loggers,
     }
 
     return config

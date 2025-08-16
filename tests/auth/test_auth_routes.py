@@ -61,8 +61,7 @@ def test_logout_and_refresh_request(client):
     response = client.post("/auth/login", data=login_data, headers=headers)
     assert response.status_code == 200
     assert response.cookies.get("refresh_token") == client.cookies.get("refresh_token")
-    # TODO - updating cookies to remove secure in TESTING / DEV -> client doesn't use https
-    client.cookies.set("refresh_token", client.cookies.get("refresh_token"))
+    # updating cookies to remove secure in TESTING / DEV -> client doesn't use https
     # refresh - verify that refresh_token (provided via cookie) creates an access_token
     verify_response = client.post("/auth/refresh")
     assert verify_response.status_code == 200
@@ -73,4 +72,5 @@ def test_logout_and_refresh_request(client):
     # client has not deleted cookie so retry /auth/refresh so below end_point will work
     verify_response = client.post("/auth/refresh")
     assert verify_response.status_code == 401
-    assert verify_response.json().get("detail") == "Invalid token"
+    # error from auth/dependancies
+    assert verify_response.json().get("detail") == "Authentication token missing"

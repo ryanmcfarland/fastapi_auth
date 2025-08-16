@@ -1,4 +1,4 @@
-from typing import Annotated
+import logging
 
 from fastapi import APIRouter, Depends
 
@@ -7,6 +7,8 @@ from app.core.utils import ErrorHandlerRoute
 
 from app.core.dependancies import get_db
 from app.auth.dependancies import require_admin
+
+log = logging.getLogger("admin.routes")
 
 # `dependencies`
 # -> Run this function before every route, but routes can't access the return value
@@ -26,4 +28,5 @@ def pool_stats(database: AsyncDatabase = Depends(get_db)):
 
 @admin_router.get("/database/health_check")
 async def health_check(database: AsyncDatabase = Depends(get_db)):
-    return await database.health_check()
+    log.info("[admin.health_check] Checking database status")
+    await database.health_check()

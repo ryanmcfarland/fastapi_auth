@@ -1,15 +1,21 @@
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 
 from asgi_correlation_id import CorrelationIdMiddleware
 
+from config import get_settings
+
 from app.core.startup import lifespan
 from app.core.utils import LoggingMiddleware
-
 from app.auth.routes import auth_router
 from app.admin.routes import admin_router
 
-app = FastAPI(lifespan=lifespan)
+settings = get_settings()
+
+app = FastAPI(
+    lifespan=lifespan,
+    openapi_url="/openapi.json" if settings.SHOW_DOCS else None,
+)
 
 app.include_router(auth_router)
 app.include_router(admin_router)
@@ -22,5 +28,8 @@ app.add_middleware(CorrelationIdMiddleware)
 
 @app.get("", include_in_schema=False)
 @app.get("/", include_in_schema=False)
-async def docs_redirect():
-    return RedirectResponse(url="/docs")
+def docs_redirect():
+    if settings.SHOW_DOCS:
+        return RedirectResponse(url="/docs")
+    else:
+        return HTMLResponse("<h1>API Server Running</h1>")

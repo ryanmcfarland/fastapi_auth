@@ -1,11 +1,3 @@
-"""
-Required JWT Constants
-SECRET_KEY
-ALGORITHM
-ACCESS_TOKEN_EXPIRE_MINUTES
-REFRESH_TOKEN_EXPIRE_DAYS
-"""
-
 import bcrypt
 import jwt
 
@@ -37,14 +29,13 @@ class OAuth2PasswordBearerWithCookie(OAuth2PasswordBearer):
                     return None
             return param
         # No token in Authorization header. Try using cookie:
-        if token := request.cookies.get("session", None):
-            param = token
-            return param
+        if token := request.cookies.get("access_token", None):
+            return token
         else:
             raise HTTPException(status_code=401, detail="Not authenticated", headers={"WWW-Authenticate": "Bearer"})
 
 
-# Note (2025-08-16) refreshUrl parameter is not used
+# Note (asof 2025-08-16) refreshUrl parameter is not used
 oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login", refreshUrl="auth/refresh")
 
 
