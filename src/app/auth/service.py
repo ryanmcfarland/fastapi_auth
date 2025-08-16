@@ -42,8 +42,10 @@ class UserService:
             return None
         return user
 
-    async def logout_user(self, user_id: int) -> None:
-        await self.user_repo.logout_user(user_id)
+    async def logout_user(self, token: str) -> None:
+        """ """
+        payload = self.token_utils.decode_token(token)
+        await self.user_repo.logout_user(payload.get("sub", ""))
 
     async def verify_refresh_token(self, token: str) -> str:
         payload = self.token_utils.decode_token(token)

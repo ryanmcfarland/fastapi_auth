@@ -1,5 +1,5 @@
 """
-# Required JWT Constants
+Required JWT Constants
 SECRET_KEY
 ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES
@@ -8,7 +8,6 @@ REFRESH_TOKEN_EXPIRE_DAYS
 
 import bcrypt
 import jwt
-import re
 
 from typing import Optional
 
@@ -29,29 +28,23 @@ class OAuth2PasswordBearerWithCookie(OAuth2PasswordBearer):
         # Try to get auth field from headers (will be None during a redirect)
         authorization = request.headers.get("Authorization")
         if authorization is not None:
+            # docs (Authorize) creates header : "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
             scheme, param = get_authorization_scheme_param(authorization)
             if not authorization or scheme.lower() != "bearer":
                 if self.auto_error:
-                    raise HTTPException(
-                        status_code=404,
-                        detail="Not authenticated",
-                        headers={"WWW-Authenticate": "Bearer"},
-                    )
+                    raise HTTPException(status_code=401, detail="Not authenticated", headers={"WWW-Authenticate": "Bearer"})
                 else:
                     return None
             return param
-        # No token in header. Try using cookie:
+        # No token in Authorization header. Try using cookie:
         if token := request.cookies.get("session", None):
             param = token
             return param
         else:
-            raise HTTPException(
-                status_code=404,
-                detail="Not authenticated",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise HTTPException(status_code=401, detail="Not authenticated", headers={"WWW-Authenticate": "Bearer"})
 
 
+# Note (2025-08-16) refreshUrl parameter is not used
 oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login", refreshUrl="auth/refresh")
 
 
@@ -65,23 +58,6 @@ class PasswordUtils:
     def verify_password(plain_password: str, hashed_password: str) -> bool:
         """Verify a password against its hash."""
         return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
-
-    @staticmethod
-    def is_strong_password(password: str) -> tuple[bool, str]:
-        """Check if password meets security requirements."""
-        if len(password) < 8:
-            return False, "Password must be at least 8 characters"
-        if len(password) > 128:
-            return False, "Password too long"
-        if not re.search(r"[A-Z]", password):
-            return False, "Password must contain uppercase letter"
-        if not re.search(r"[a-z]", password):
-            return False, "Password must contain lowercase letter"
-        if not re.search(r"\d", password):
-            return False, "Password must contain a number"
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-            return False, "Password must contain a special character"
-        return True, "Password is strong"
 
 
 class TokenUtils:

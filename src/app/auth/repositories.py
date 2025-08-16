@@ -38,5 +38,6 @@ class AuthRepository:
         params = {"username": username, "refresh_token": refresh_token}
         return await self.db.execute(load_sql_query("insert_refresh_token", module="auth"), params=params)
 
-    async def logout_user(self, user_id: int) -> None:
-        return await self.db.execute(load_sql_query("logout_user", module="auth"), params={"user_id": user_id})
+    async def logout_user(self, username: str) -> None:
+        """ """
+        return await self.db.execute(load_sql_query("logout_user", module="auth"), params={"username": username})

@@ -63,7 +63,8 @@ async def test_logout_user(get_test_db):
     tokens = await service.login_user("testuser", "DummyPass1")
     test_token = await service.verify_refresh_token(tokens["refresh_token"])
     assert isinstance(test_token, str)
-    await service.logout_user(1)
+    # below endpoint requires a refresh_token to determine the username
+    await service.logout_user(tokens["refresh_token"])
     # test for the incoming HTTPException
     with pytest.raises(HTTPException) as excinfo:
         await service.verify_refresh_token(tokens["refresh_token"])

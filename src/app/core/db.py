@@ -75,52 +75,36 @@ class AsyncDatabase:
             try:
                 yield conn
             except Exception as e:
-                log.error(f"Database connection error: {e}")
+                log.error(f"Database connection error: {e.__class__.__name__}({e})", exc_info=True)
                 raise
 
     async def execute(self, query: str, params: Optional[Union[Dict[str, Any], List[Any]]] = None) -> None:
         """Execute query and fetch a single row."""
         async with self.get_connection() as conn:
             conn.row_factory = dict_row
-            try:
-                await conn.execute(query, params=params)
-            except Exception as e:
-                log.error(f"Fetchone error: {e}")
-                raise
+            await conn.execute(query, params=params)
         return None
 
     async def fetchone(self, query: str, params: Optional[Union[Dict[str, Any], List[Any]]] = None) -> Optional[Dict[str, Any]]:
         """Execute query and fetch a single row."""
         async with self.get_connection() as conn:
             conn.row_factory = dict_row
-            try:
-                cursor = await conn.execute(query, params=params)
-                row = await cursor.fetchone()
-                return dict(row) if row else None
-            except Exception as e:
-                log.error(f"Fetchone error: {e}")
-                raise
+            cursor = await conn.execute(query, params=params)
+            row = await cursor.fetchone()
+            return dict(row) if row else None
 
     async def fetchall(self, query: str, params: Optional[Union[Dict[str, Any], List[Any]]] = None) -> List[Dict[str, Any]]:
         """Execute query and fetch all rows."""
         async with self.get_connection() as conn:
             conn.row_factory = dict_row
-            try:
-                cursor = await conn.execute(query, params=params)
-                rows = await cursor.fetchall()
-                return [dict(row) for row in rows]
-            except Exception as e:
-                log.error(f"Fetchall error: {e}")
-                raise
+            cursor = await conn.execute(query, params=params)
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
 
     async def health_check(self) -> bool:
         """Check if the database connection is healthy."""
-        try:
-            await self.fetchone("SELECT 1")
-            return True
-        except Exception as e:
-            log.error(f"Database health check failed: {e}")
-            return False
+        await self.fetchone("SELECT 1")
+        return True
 
     @property
     def pool_stats(self) -> Dict[str, Any]:

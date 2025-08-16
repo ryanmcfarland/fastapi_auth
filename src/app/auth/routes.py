@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 import app.auth.models as models
 
 from app.core.utils import ErrorHandlerRoute
-from app.auth.service import UserService, PermissionService
+from app.auth.service import UserService
 from app.auth.dependancies import get_user_service, get_refresh_token, get_permission_service
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"], route_class=ErrorHandlerRoute)
@@ -14,6 +14,7 @@ auth_router = APIRouter(prefix="/auth", tags=["auth"], route_class=ErrorHandlerR
 
 @auth_router.post("/register", status_code=201, response_model=models.UserResponse)
 async def register(user_data: models.RegisterRequest, user_service: UserService = Depends(get_user_service)):
+    """ """
     try:
         return await user_service.register_user(user_data)
     except HTTPException:
@@ -35,13 +36,15 @@ async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
 
 
 @auth_router.post("/logout")
-async def logout(response: Response, permission_service: PermissionService = Depends(get_permission_service)):
-    """test"""
-    await permission_service.logout_user()
-    response.delete_cookies(key="access_token")
-    return {"msg": "Logout endpoint hit (mocked)"}
+async def logout(response: Response, refresh_token: str = Depends(get_refresh_token()), user_service: UserService = Depends(get_user_service)):
+    """ """
+    await user_service.logout_user(refresh_token)
+    response.delete_cookie(key="refresh_token")
+    response.status_code = 204
+    return response
 
 
-@auth_router.post("/refresh")
+@auth_router.post("/refresh", response_model=models.Token)
 async def refresh(refresh_token_cookie: str = Depends(get_refresh_token()), user_service: UserService = Depends(get_user_service)):
-    return await user_service.verify_refresh_token(refresh_token_cookie)
+    token = await user_service.verify_refresh_token(refresh_token_cookie)
+    return {"access_token": token, "token_type": "bearer"}

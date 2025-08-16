@@ -6,7 +6,6 @@ from app.auth.repositories import AuthRepository
 @pytest.mark.auth
 @pytest.mark.asyncio
 async def test_insert_user(get_test_db):
-    """Test user Insert"""
     repo = AuthRepository(get_test_db)
     await repo.insert_user("testuser", "test@example.com", "hashed_password")
     data: dict = await repo.get_user_by_username("testuser")
@@ -19,7 +18,6 @@ async def test_insert_user(get_test_db):
 @pytest.mark.auth
 @pytest.mark.asyncio
 async def test_refresh_token_logic(get_test_db):
-    """Test user Insert"""
     repo = AuthRepository(get_test_db)
     await repo.insert_user("testuser", "test@example.com", "hashed_password")
     data: dict = await repo.get_user_by_username("testuser")
@@ -37,12 +35,11 @@ async def test_refresh_token_logic(get_test_db):
 @pytest.mark.auth
 @pytest.mark.asyncio
 async def test_logout_user(get_test_db):
-    """Test user Insert"""
     repo = AuthRepository(get_test_db)
     await repo.insert_user("testuser", "test@example.com", "hashed_password")
     data: dict = await repo.get_user_by_username("testuser")
     assert data["username"] == "testuser"
     await repo.insert_refresh_token("testuser", "token1")
     assert await repo.verify_refresh_token("testuser", "token1")
-    await repo.logout_user(1)
+    await repo.logout_user("testuser")
     assert False == await repo.verify_refresh_token("testuser", "token1")
