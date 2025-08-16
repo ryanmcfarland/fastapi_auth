@@ -76,7 +76,7 @@ class PermissionService:
     async def require_role(self, role: str) -> models.User:
         """Dependency factory to require specific role"""
         current_user = await self.get_current_user()
-        if role not in current_user.get("user_roles", []):
+        if role not in current_user.user_roles:
             raise HTTPException(status_code=401, detail=f"Missing required role: {role.value}")
         return current_user
 

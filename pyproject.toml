@@ -36,6 +36,8 @@ dev = ["pytest==7.4.0", "pytest-cov==6.2.1", "pytest-asyncio==1.1.0"]
 # Test configuration
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
+# required to ensure database object is in same loop when opened
+asyncio_default_fixture_loop_scope = "session"
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = []
@@ -44,6 +46,7 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "auth: marks tests related to authentication",
+    "admin: marks tests related to admin endpoints",
 ]
 
 # Coverage configuration

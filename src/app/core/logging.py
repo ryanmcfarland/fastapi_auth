@@ -72,6 +72,9 @@ def get_logging_config(log_level: str = "INFO") -> Dict[str, Any]:
             "app": {"level": log_level, "handlers": ["console", "file_watcher"], "propagate": False},
             "core.utils": {"level": log_level, "handlers": ["web_console", "web_file_watcher"], "propagate": False},
             "core.db": {"level": log_level, "handlers": ["web_console", "web_file_watcher"], "propagate": False},
+            # Psycopg loggers
+            "psycopg": {"level": "DEBUG", "handlers": ["console", "file_watcher"], "propagate": False},
+            "psycopg.connections": {"level": "DEBUG", "handlers": ["console", "file_watcher"], "propagate": False},
         },
     }
 

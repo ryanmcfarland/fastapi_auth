@@ -15,14 +15,14 @@ log = logging.getLogger("core.db")
 
 class AsyncDatabase:
     """
-    Async database class using psycopg3 AsyncConnectionPool for FastAPI applications.
+    Async database class using psycopg3 AsyncConnectionPool.
 
-    Features:
-    - Connection pooling with automatic connection management
-    - Transaction support with context managers
-    - Prepared statement caching
-    - Proper error handling and logging
-    - FastAPI lifecycle integration
+    Descirption:
+    - min_size - pool maintains these connections at all times
+    - max_size - pool can grow up to 4 connections
+    - max_waiting - how many clients can queue for a connection until one frees up
+    - max_lifetime - how long a connection can exist before being refreshed
+    - max_idle - how long a connection exists until being closed
     """
 
     def __init__(
@@ -38,16 +38,14 @@ class AsyncDatabase:
         self.queries = {}
         self.pool: Optional[AsyncConnectionPool] = None
         self.pool_config = {
-            "conninfo": self.connection_string,
             "min_size": min_size,
             "max_size": max_size,
             "max_waiting": max_waiting,
             "max_lifetime": max_lifetime,
             "max_idle": max_idle,
             "reconnect_timeout": reconnect_timeout,
-            "open": False,
         }
-        self.pool = AsyncConnectionPool(**self.pool_config)
+        self.pool = AsyncConnectionPool(self.connection_string, **self.pool_config, open=False)
         return
 
     async def initialize(self) -> None:
@@ -56,7 +54,7 @@ class AsyncDatabase:
             await self.pool.open()
             log.info(f"Database pool initialized with {self.pool.min_size}-{self.pool.max_size} connections")
         except Exception as e:
-            log.error(f"Failed to initialize database pool: {e}")
+            log.error(f"Failed to initialize database pool: {type(e).__name__}({e})")
             raise
 
     async def close(self) -> None:
@@ -70,7 +68,6 @@ class AsyncDatabase:
         """Get a connection from the pool with automatic cleanup."""
         if not self.pool:
             raise RuntimeError("Database pool not initialized")
-
         async with self.pool.connection() as conn:
             try:
                 yield conn
@@ -111,5 +108,4 @@ class AsyncDatabase:
         """Get connection pool statistics."""
         if not self.pool:
             return {}
-
-        return {"size": self.pool.size, "available": self.pool.available, "min_size": self.pool.min_size, "max_size": self.pool.max_size}
+        return {"pool_stats": self.pool.get_stats(), "pool_config": self.pool_config}

@@ -1,9 +1,13 @@
 import re
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import Optional, List
+from pydantic import BaseModel, Field, field_validator, field_serializer
+from typing import Optional, List, Union
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 class Token(BaseModel):
@@ -59,6 +63,11 @@ class User(BaseModel):
     username: str
     email: str
     password_hash: str
-    roles: List[str]
+    user_roles: List[str]
     is_active: bool = True
-    created_at: Optional[str] = None
+    created_at: datetime = Field(default_factory=utc_now)
+
+    @field_serializer("created_at", when_used="json")
+    def serialize_created_at_json(self, dt: datetime, _info) -> str:
+        """For JSON serialization - ISO format"""
+        return dt.isoformat()
