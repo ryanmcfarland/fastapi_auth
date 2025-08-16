@@ -54,8 +54,16 @@ Token & Password Check. `TokenUtils` contains logic to decode JWT's and is used 
 pytest --collect-only
 ```
 
+- run only tests marked with `auth`
+
 ```bash
 pytest -v -m auth
+```
+
+- run pytest with outputing internal log statements
+
+```bash
+pytest --log-cli-level=INFO
 ```
 
 # Run : Gunicorn

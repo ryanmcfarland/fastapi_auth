@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Callable
 
-from fastapi import Request, Response
+from fastapi import Request, Response, HTTPException
 from fastapi.routing import APIRoute
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -41,6 +41,9 @@ class ErrorHandlerRoute(APIRoute):
             try:
                 response = await original_route_handler(request)
                 return response
+            except HTTPException as e:
+                log.error(f"{request.method} : {self.path} - HTTP Exception : {type(e).__name__} : {e.status_code}")
+                raise
             except Exception as e:
                 log.error(f"{request.method} : {self.path} - Request Exception : {type(e).__name__}")
                 raise

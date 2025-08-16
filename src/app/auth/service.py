@@ -35,10 +35,6 @@ class UserService:
         await self.user_repo.insert_refresh_token(username, refresh_token)
         return {"access_token": access_token, "refresh_token": refresh_token}
 
-    async def logout_user(self, username: str, refresh_token: str) -> None:
-        await self.db.execute("auth.delete_refresh_token", params={"username": username, "refresh_token": refresh_token})
-        return
-
     async def authenticate_user(self, username: str, password: str) -> Optional[dict]:
         """Authenticate user with username/password."""
         user = await self.user_repo.get_user_by_username(username)
@@ -46,19 +42,26 @@ class UserService:
             return None
         return user
 
-    async def verify_refresh_token(self, token: str, token_type: str) -> str:
+    async def logout_user(self, token: str) -> None:
+        """ """
         payload = self.token_utils.decode_token(token)
-        if payload.get("type") != token_type:
+        await self.user_repo.logout_user(payload.get("sub", ""))
+
+    async def verify_refresh_token(self, token: str) -> str:
+        payload = self.token_utils.decode_token(token)
+        if payload.get("type") != "refresh":
             raise HTTPException(status_code=401, detail="Invalid token type")
-        verified = await self.user_repo.verify_refresh_token(payload.get("sub", None), token)
+        verified: bool = await self.user_repo.verify_refresh_token(payload.get("sub", ""), token)
         if not verified:
-            raise HTTPException(status_code=401, detail="Invalid token type")
+            raise HTTPException(status_code=401, detail="Invalid token")
         return self.token_utils.create_access_token(data=payload)
 
     async def get_current_user(self, token: str) -> models.User:
         """Extract current user from access token"""
         payload = self.token_utils.decode_token(token)
-        user = await self.user_repo.get_user_by_username(payload.get("sub", None))
+        if payload.get("type") != "access":
+            raise HTTPException(status_code=401, detail="Invalid token type")
+        user = await self.user_repo.get_user_by_username(payload.get("sub", ""))
         return models.User(**user)
 
 
@@ -73,6 +76,11 @@ class PermissionService:
     async def require_role(self, role: str) -> models.User:
         """Dependency factory to require specific role"""
         current_user = await self.get_current_user()
-        if role not in current_user.get("user_roles", []):
-            raise HTTPException(status_code=401, detail=f"Missing required role: {role.value}")
+        if role not in current_user.user_roles:
+            raise HTTPException(status_code=401, detail=f"User [{current_user.username}] Missing required role")
         return current_user
+
+    async def logout_user(self) -> None:
+        """You need to be authenitcated to logout. This assures thay"""
+        user: models.User = await self.get_current_user()
+        await self.user_service.logout_user(user.id)

@@ -15,14 +15,14 @@ log = logging.getLogger("core.db")
 
 class AsyncDatabase:
     """
-    Async database class using psycopg3 AsyncConnectionPool for FastAPI applications.
+    Async database class using psycopg3 AsyncConnectionPool.
 
-    Features:
-    - Connection pooling with automatic connection management
-    - Transaction support with context managers
-    - Prepared statement caching
-    - Proper error handling and logging
-    - FastAPI lifecycle integration
+    Descirption:
+    - min_size - pool maintains these connections at all times
+    - max_size - pool can grow up to 4 connections
+    - max_waiting - how many clients can queue for a connection until one frees up
+    - max_lifetime - how long a connection can exist before being refreshed
+    - max_idle - how long a connection exists until being closed
     """
 
     def __init__(
@@ -38,16 +38,14 @@ class AsyncDatabase:
         self.queries = {}
         self.pool: Optional[AsyncConnectionPool] = None
         self.pool_config = {
-            "conninfo": self.connection_string,
             "min_size": min_size,
             "max_size": max_size,
             "max_waiting": max_waiting,
             "max_lifetime": max_lifetime,
             "max_idle": max_idle,
             "reconnect_timeout": reconnect_timeout,
-            "open": False,
         }
-        self.pool = AsyncConnectionPool(**self.pool_config)
+        self.pool = AsyncConnectionPool(self.connection_string, **self.pool_config, open=False)
         return
 
     async def initialize(self) -> None:
@@ -56,7 +54,7 @@ class AsyncDatabase:
             await self.pool.open()
             log.info(f"Database pool initialized with {self.pool.min_size}-{self.pool.max_size} connections")
         except Exception as e:
-            log.error(f"Failed to initialize database pool: {e}")
+            log.error(f"Failed to initialize database pool: {type(e).__name__}({e})")
             raise
 
     async def close(self) -> None:
@@ -70,62 +68,44 @@ class AsyncDatabase:
         """Get a connection from the pool with automatic cleanup."""
         if not self.pool:
             raise RuntimeError("Database pool not initialized")
-
         async with self.pool.connection() as conn:
             try:
                 yield conn
             except Exception as e:
-                log.error(f"Database connection error: {e}")
+                log.error(f"Database connection error: {e.__class__.__name__}({e})", exc_info=True)
                 raise
 
     async def execute(self, query: str, params: Optional[Union[Dict[str, Any], List[Any]]] = None) -> None:
         """Execute query and fetch a single row."""
         async with self.get_connection() as conn:
             conn.row_factory = dict_row
-            try:
-                await conn.execute(query, params=params)
-            except Exception as e:
-                log.error(f"Fetchone error: {e}")
-                raise
+            await conn.execute(query, params=params)
         return None
 
     async def fetchone(self, query: str, params: Optional[Union[Dict[str, Any], List[Any]]] = None) -> Optional[Dict[str, Any]]:
         """Execute query and fetch a single row."""
         async with self.get_connection() as conn:
             conn.row_factory = dict_row
-            try:
-                cursor = await conn.execute(query, params=params)
-                row = await cursor.fetchone()
-                return dict(row) if row else None
-            except Exception as e:
-                log.error(f"Fetchone error: {e}")
-                raise
+            cursor = await conn.execute(query, params=params)
+            row = await cursor.fetchone()
+            return dict(row) if row else None
 
     async def fetchall(self, query: str, params: Optional[Union[Dict[str, Any], List[Any]]] = None) -> List[Dict[str, Any]]:
         """Execute query and fetch all rows."""
         async with self.get_connection() as conn:
             conn.row_factory = dict_row
-            try:
-                cursor = await conn.execute(query, params=params)
-                rows = await cursor.fetchall()
-                return [dict(row) for row in rows]
-            except Exception as e:
-                log.error(f"Fetchall error: {e}")
-                raise
+            cursor = await conn.execute(query, params=params)
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
 
     async def health_check(self) -> bool:
         """Check if the database connection is healthy."""
-        try:
-            await self.fetchone("SELECT 1")
-            return True
-        except Exception as e:
-            log.error(f"Database health check failed: {e}")
-            return False
+        await self.fetchone("SELECT 1")
+        return True
 
     @property
     def pool_stats(self) -> Dict[str, Any]:
         """Get connection pool statistics."""
         if not self.pool:
             return {}
-
-        return {"size": self.pool.size, "available": self.pool.available, "min_size": self.pool.min_size, "max_size": self.pool.max_size}
+        return {"pool_stats": self.pool.get_stats(), "pool_config": self.pool_config}

@@ -31,7 +31,7 @@ def get_refresh_token(
         elif cookie_token:
             return cookie_token
         else:
-            raise HTTPException(status_code="401", detail="Authentication token missing")
+            raise HTTPException(status_code=401, detail="Authentication token missing")
 
     return _dependency
 

@@ -1,9 +1,13 @@
 import re
 
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import Optional, List
+from pydantic import BaseModel, Field, field_validator, field_serializer
+from typing import Optional, List, Union
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 class Token(BaseModel):
@@ -32,6 +36,8 @@ class RegisterRequest(BaseModel):
         """Validate password strength without hashing."""
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
+        if len(v) > 128:
+            raise ValueError("Password too long, maximun length is 128 characters")
         if not re.search(r"[A-Z]", v):
             raise ValueError("Password must contain at least one uppercase letter")
         if not re.search(r"[a-z]", v):
@@ -42,7 +48,7 @@ class RegisterRequest(BaseModel):
 
 
 class UserResponse(BaseModel):
-    """Response model - excludes password completely."""
+    """Response model - excludes id & password."""
 
     username: str
     email: str
@@ -57,6 +63,11 @@ class User(BaseModel):
     username: str
     email: str
     password_hash: str
-    roles: List[str]
+    user_roles: List[str]
     is_active: bool = True
-    created_at: Optional[str] = None
+    created_at: datetime = Field(default_factory=utc_now)
+
+    @field_serializer("created_at", when_used="json")
+    def serialize_created_at_json(self, dt: datetime, _info) -> str:
+        """For JSON serialization - ISO format"""
+        return dt.isoformat()

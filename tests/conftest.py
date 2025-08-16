@@ -1,8 +1,7 @@
 import pytest
-import asyncio
+import pytest_asyncio
 
 from datetime import datetime, timezone
-from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -14,12 +13,19 @@ from app.core.utils import load_sql_query
 
 settings = get_settings()
 
-test_db = AsyncDatabase()
+
+"""
+Note -> this requires the same event_loop (asyncio_default_fixture_loop_scope = "session")
+If the database was greated on a per module basis and passed around, we could set the default to "module"
+"""
 
 
-@pytest.fixture(scope="session", autouse=True)
-def get_test_db() -> AsyncDatabase:
-    return test_db
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def get_test_db():
+    test_db = AsyncDatabase()
+    await test_db.initialize()
+    yield test_db
+    await test_db.close()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -28,32 +34,19 @@ def tests_directory():
     return settings.REPO_DIR / "tests"
 
 
-@pytest.fixture(scope="session")
-def get_event_loop():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_databases(get_event_loop, get_test_db):
-    loop = get_event_loop
-    loop.run_until_complete(get_test_db.initialize())
-    yield
-    loop.run_until_complete(get_test_db.close())
-
-
-@pytest.fixture(scope="function", autouse=True)
-def reset_database(get_event_loop, tests_directory, get_test_db):
-    loop = get_event_loop
+@pytest_asyncio.fixture(scope="function", autouse=True)
+async def reset_database(tests_directory, get_test_db):
     query = load_sql_query("setup_db", base_path=tests_directory)
-    loop.run_until_complete(get_test_db.execute(query))
+    try:
+        await get_test_db.execute(query)
+        print(f"Query executed successfully")
+    except Exception as e:
+        print("here")
 
 
 @pytest.fixture(scope="function")
-def client():
-    app.dependency_overrides[get_db] = lambda: test_db
+def client(get_test_db):
+    app.dependency_overrides[get_db] = lambda: get_test_db
     return TestClient(app)
 
 

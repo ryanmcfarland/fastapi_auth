@@ -31,8 +31,13 @@ class AuthRepository:
 
     async def verify_refresh_token(self, username: str, token: str) -> bool:
         query = load_sql_query("verify_refresh_token", module="auth")
-        return await self.db.fetchone(query, params={"username": username, "refresh_token": token})
+        result = await self.db.fetchone(query, params={"username": username, "refresh_token": token})
+        return result.get("valid", False)
 
     async def insert_refresh_token(self, username: str, refresh_token: str) -> dict:
         params = {"username": username, "refresh_token": refresh_token}
         return await self.db.execute(load_sql_query("insert_refresh_token", module="auth"), params=params)
+
+    async def logout_user(self, username: str) -> None:
+        """ """
+        return await self.db.execute(load_sql_query("logout_user", module="auth"), params={"username": username})

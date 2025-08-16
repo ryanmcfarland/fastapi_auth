@@ -1,4 +1,5 @@
-SELECT 
+SELECT
+    u.id,
     u.username,
     u.email,
     u.password_hash,
