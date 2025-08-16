@@ -77,7 +77,7 @@ class PermissionService:
         """Dependency factory to require specific role"""
         current_user = await self.get_current_user()
         if role not in current_user.user_roles:
-            raise HTTPException(status_code=401, detail=f"Missing required role: {role.value}")
+            raise HTTPException(status_code=401, detail=f"User [{current_user.username}] Missing required role")
         return current_user
 
     async def logout_user(self) -> None:
