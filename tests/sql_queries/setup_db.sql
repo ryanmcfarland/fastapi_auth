@@ -15,8 +15,12 @@ CREATE TABLE users (
     email TEXT NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC'),
     last_login_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC'),
+    deleted_at TIMESTAMPTZ,
+    deleted_by INTEGER,
     password_hash TEXT NOT NULL,
-    verified BOOLEAN NOT NULL DEFAULT FALSE
+    verified BOOLEAN NOT NULL DEFAULT FALSE,
+    -- Constraints
+    CONSTRAINT fk_users_deleted_by FOREIGN KEY (deleted_by) REFERENCES users(id)
 );
 
 
@@ -33,6 +37,7 @@ CREATE TABLE user_roles (
     role_id INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC'),
     PRIMARY KEY (user_id, role_id), -- primary key prevents duplicates
+    -- Constraints
     CONSTRAINT fk_user_roles_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_user_roles_role_id FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
 );
@@ -44,6 +49,7 @@ CREATE TABLE user_refresh_tokens (
     refresh_token TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC'),
     last_refresh_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC'),
+    -- Constraints
     CONSTRAINT fk_refresh_tokens_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -92,7 +98,6 @@ BEGIN
         WHERE user_id = NEW.user_id
         ORDER BY created_at ASC -- or ORDER BY id ASC if using auto-increment
         LIMIT 1;
-        
         -- Delete the oldest row
         DELETE FROM user_refresh_tokens 
         WHERE id = oldest_id;
@@ -101,6 +106,35 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+
+-- INSERT Basic Roles before any Triggers have been Applied
+
+
+-- Insert default roles
+INSERT INTO roles (role_name) VALUES 
+    ('user'),
+    ('system'),
+    ('admin')
+ON CONFLICT (role_name) DO NOTHING;
+
+
+-- Insert unknown user to handle future defaults
+INSERT INTO users (id, username, email, password_hash) VALUES 
+    (1, 'Unknown User', 'unknown@system.local', 'dummy_password')
+ON CONFLICT DO NOTHING;
+
+
+-- Insert 'Unknown User' to 'system' role
+INSERT INTO user_roles (user_id, role_id) VALUES
+    (1, 2)
+ON CONFLICT DO NOTHING;
+
+-- Set sequence to continue from ID 2
+ALTER SEQUENCE users_id_seq RESTART WITH 2;
+
+
+-- SET Triggers
 
 
 -- Trigger that fires after each user insertion to create the default role
@@ -114,10 +148,3 @@ CREATE TRIGGER trigger_limit_user_refresh_tokens
     AFTER INSERT ON user_refresh_tokens
     FOR EACH ROW
     EXECUTE FUNCTION limit_user_refresh_tokens();
-
-
--- Insert default roles
-INSERT INTO roles (role_name) VALUES 
-    ('user'),
-    ('admin')
-ON CONFLICT (role_name) DO NOTHING;
