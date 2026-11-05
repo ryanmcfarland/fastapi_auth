@@ -1,6 +1,9 @@
 from .db import AsyncDatabase
+from config import get_settings
 
-_db: AsyncDatabase = None
+_db: AsyncDatabase | None = None
+
+settings = get_settings()
 
 
 async def initialize_database():

@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends
 
 from app.core.db import AsyncDatabase
-from app.core.utils import ErrorHandlerRoute
+from app.api.routing import BaseErrorHandlerRoute
 
 from app.core.dependancies import get_db
 from app.auth.dependancies import require_admin
@@ -17,7 +17,7 @@ admin_router = APIRouter(
     prefix="/admin",
     tags=["admin"],
     dependencies=[Depends(require_admin)],
-    route_class=ErrorHandlerRoute,
+    route_class=BaseErrorHandlerRoute,
 )
 
 
