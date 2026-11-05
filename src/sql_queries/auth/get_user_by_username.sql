@@ -1,6 +1,9 @@
+-- Get User by unique username
 SELECT
     u.id,
     u.username,
+    u.display_name,
+    u.slug,
     u.email,
     u.password_hash,
     u.created_at,

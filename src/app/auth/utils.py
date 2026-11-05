@@ -1,42 +1,36 @@
+from datetime import datetime, timedelta, timezone
+from enum import StrEnum
+from typing import Any, NotRequired, TypedDict, cast
+
 import bcrypt
 import jwt
 
-from typing import Optional
-
-from fastapi import Request, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-from fastapi.security.utils import get_authorization_scheme_param
-from datetime import datetime, timedelta, timezone
+from app.auth.exceptions import InvalidTokenError
 
 from config import get_settings
 
 settings = get_settings()
 
 
-class OAuth2PasswordBearerWithCookie(OAuth2PasswordBearer):
-    """Extends the OAuth2PasswordBearer class to retrieve short-lived access token either from headers or cookies"""
-
-    async def __call__(self, request: Request) -> Optional[str]:
-        # Try to get auth field from headers (will be None during a redirect)
-        authorization = request.headers.get("Authorization")
-        if authorization is not None:
-            # docs (Authorize) creates header : "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-            scheme, param = get_authorization_scheme_param(authorization)
-            if not authorization or scheme.lower() != "bearer":
-                if self.auto_error:
-                    raise HTTPException(status_code=401, detail="Not authenticated", headers={"WWW-Authenticate": "Bearer"})
-                else:
-                    return None
-            return param
-        # No token in Authorization header. Try using cookie:
-        if token := request.cookies.get("access_token", None):
-            return token
-        else:
-            raise HTTPException(status_code=401, detail="Not authenticated", headers={"WWW-Authenticate": "Bearer"})
+class TokenType(StrEnum):
+    ACCESS = "access"
+    REFRESH = "refresh"
+    PASSWORD_RESET = "password_reset"
 
 
-# Note (asof 2025-08-16) refreshUrl parameter is not used
-oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login", refreshUrl="auth/refresh")
+class TokenInput(TypedDict):
+    """Fields supplied when creating any JWT."""
+
+    sub: str  # Username (JWT subject claim)
+    roles: NotRequired[list[str]]  # Optional user roles for access control
+
+
+# Type definitions for token payloads
+class TokenPayload(TokenInput, total=True):
+    """Base schema for all JWT token payloads."""
+
+    exp: int  # Expiration time (unix timestamp)
+    type: TokenType  # Token type: "access", "refresh", or "password_reset"
 
 
 class PasswordUtils:
@@ -53,22 +47,62 @@ class PasswordUtils:
 
 class TokenUtils:
     @staticmethod
-    def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
-        to_encode = data.copy()
-        expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
-        to_encode.update({"exp": expire, "type": "access"})
-        return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    def create_access_token(
+        data: TokenInput,
+        expires_delta: timedelta | None = None,
+    ) -> str:
+        """Create a JWT access token."""
+        expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.access_token_expire_minutes))
+        to_encode: dict[str, Any] = {**data, "exp": expire, "type": TokenType.ACCESS}
+        return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
     @staticmethod
-    def create_refresh_token(data: dict, expires_delta: timedelta = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)):
-        to_encode = data.copy()
+    def create_refresh_token(
+        data: TokenInput,
+        expires_delta: timedelta = timedelta(days=settings.refresh_token_expire_days),
+    ) -> str:
+        """Create a JWT refresh token."""
         expire = datetime.now(timezone.utc) + expires_delta
-        to_encode.update({"exp": expire, "type": "refresh"})
-        return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        to_encode: dict[str, Any] = {**data, "exp": expire, "type": TokenType.REFRESH}
+        return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
     @staticmethod
-    def decode_token(token: str):
+    def create_password_reset_token(
+        data: TokenInput,
+        expires_delta: timedelta | None = None,
+    ) -> str:
+        """Create a JWT password reset token."""
+        expire = datetime.now(timezone.utc) + (expires_delta or timedelta(hours=settings.password_reset_token_expire_hours))
+        to_encode: dict[str, Any] = {**data, "exp": expire, "type": TokenType.PASSWORD_RESET}
+        return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+
+    @staticmethod
+    def seconds_until_expiry(token: str) -> int:
+        """Return the remaining lifetime of a valid JWT in whole seconds.
+
+        Args:
+            token: A signed, unexpired JWT.
+
+        Returns:
+            Whole seconds until the token's ``exp`` claim, never negative.
+
+        Raises:
+            InvalidTokenError: If the token is malformed or already expired.
+        """
+        payload = TokenUtils.decode_token(token)
+        return max(0, int(payload["exp"]) - int(datetime.now(timezone.utc).timestamp()))
+
+    @staticmethod
+    def decode_token(token: str) -> TokenPayload:
+        """
+        Decode and verify a JWT token.
+
+        Raises:
+            InvalidTokenError: If the token is invalid or expired.
+            Exception: Re-raises other unexpected exceptions.
+        """
         try:
-            return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        except (jwt.ExpiredSignatureError, jwt.JWTError):
-            raise HTTPException(status_code=401, detail="Invalid token")
+            payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+            return cast(TokenPayload, payload)
+        except jwt.InvalidTokenError as exc:
+            raise InvalidTokenError() from exc

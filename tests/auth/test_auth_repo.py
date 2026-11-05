@@ -1,14 +1,21 @@
 import pytest
 
+from app.core.db import AsyncDatabase
 from app.auth.repositories import AuthRepository
+
+
+@pytest.fixture
+def user() -> dict:
+    return {"username": "testuser", "slug": "testuser", "display_name": None, "email": "test@example.com", "password_hash": "hashed_password"}
 
 
 @pytest.mark.auth
 @pytest.mark.asyncio
-async def test_insert_user(get_test_db):
-    repo = AuthRepository(get_test_db)
-    await repo.insert_user("testuser", "test@example.com", "hashed_password")
-    data: dict = await repo.get_user_by_username("testuser")
+async def test_insert_user(initialized_test_db: AsyncDatabase, user: dict):
+    repo = AuthRepository(initialized_test_db)
+    await repo.insert_user(**user)
+    data = await repo.get_user_by_username("testuser")
+    assert data is not None
     assert data["username"] == "testuser"
     assert data["email"] == "test@example.com"
     # We will return password_hash as its needed in UserService.authenticate_user
@@ -17,10 +24,11 @@ async def test_insert_user(get_test_db):
 
 @pytest.mark.auth
 @pytest.mark.asyncio
-async def test_refresh_token_logic(get_test_db):
-    repo = AuthRepository(get_test_db)
-    await repo.insert_user("testuser", "test@example.com", "hashed_password")
-    data: dict = await repo.get_user_by_username("testuser")
+async def test_refresh_token_logic(initialized_test_db: AsyncDatabase, user: dict):
+    repo = AuthRepository(initialized_test_db)
+    await repo.insert_user(**user)
+    data = await repo.get_user_by_username("testuser")
+    assert data is not None
     assert data["username"] == "testuser"
     assert data["email"] == "test@example.com"
     await repo.insert_refresh_token("testuser", "token1")
@@ -34,10 +42,11 @@ async def test_refresh_token_logic(get_test_db):
 
 @pytest.mark.auth
 @pytest.mark.asyncio
-async def test_logout_user(get_test_db):
-    repo = AuthRepository(get_test_db)
-    await repo.insert_user("testuser", "test@example.com", "hashed_password")
-    data: dict = await repo.get_user_by_username("testuser")
+async def test_logout_user(initialized_test_db: AsyncDatabase, user: dict):
+    repo = AuthRepository(initialized_test_db)
+    await repo.insert_user(**user)
+    data = await repo.get_user_by_username("testuser")
+    assert data is not None
     assert data["username"] == "testuser"
     await repo.insert_refresh_token("testuser", "token1")
     assert await repo.verify_refresh_token("testuser", "token1")

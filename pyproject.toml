@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "FastAPI Auth System"
 readme = "README.md"
 license = "MIT"
-requires-python = "==3.12.4"
+requires-python = ">=3.12"
 authors = [{ name = "Ryan McFarland" }]
 classifiers = [
     "Intended Audience :: Developers",
@@ -16,7 +16,7 @@ keywords = ["fastapi", "authentication", "api", "async"]
 
 dependencies = [
     "bcrypt==4.3.0",
-    "fastapi==0.115.13",
+    "fastapi==0.162.0",
     "psycopg==3.2.9",
     "psycopg-pool==3.2.6",
     "pydantic==2.11.7",
@@ -27,11 +27,29 @@ dependencies = [
     "python-multipart==0.0.20",
     "asgi-correlation-id==4.3.4",
     "uvicorn==0.35.0",
+    "unidecode==1.4.0",
+    "email_validator==2.3.0",
     "gunicorn==23.0.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==7.4.0", "pytest-cov==6.2.1", "pytest-asyncio==1.1.0"]
+dev = [
+    "pytest==9.2.0",
+    "pytest-cov==7.1.0",
+    "pytest-asyncio==1.4.1",
+    "httpx==0.28.1"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["src/**", "README.md"]
+exclude = ["tests/**"]
+
+[tool.hatch.build.targets.wheel]
+sources = ["srcs"]
 
 # Test configuration
 [tool.pytest.ini_options]
@@ -39,7 +57,7 @@ asyncio_mode = "strict"
 # required to ensure database object is in same loop when opened
 asyncio_default_fixture_loop_scope = "session"
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "tests"]
 addopts = []
 markers = [
     "slow: marks tests as slow",
